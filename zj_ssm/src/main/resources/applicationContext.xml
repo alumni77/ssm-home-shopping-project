@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop" xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/aop https://www.springframework.org/schema/aop/spring-aop.xsd http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+    <!--    扫描包,除了不扫 controller-->
+    <context:component-scan base-package="com.zjedu.furns">
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+    </context:component-scan>
+
+    <!--    引入外部的jdbc.properties文件-->
+    <context:property-placeholder location="classpath:jdbc.properties"/>
+    <bean class="com.alibaba.druid.pool.DruidDataSource" id="pooledDataSource">
+        <property name="username" value="${jdbc.user}"></property>
+        <property name="password" value="${jdbc.pwd}"></property>
+        <property name="driverClassName" value="${jdbc.driver}"></property>
+        <property name="url" value="${jdbc.url}"></property>
+    </bean>
+
+    <!--    配置mybatis和spring整合-->
+    <bean class="org.mybatis.spring.SqlSessionFactoryBean" id="sqlSessionFactory">
+        <property name="configLocation" value="classpath:mybatis-config.xml"></property>
+        <property name="dataSource" ref="pooledDataSource"></property>
+        <property name="mapperLocations" value="classpath:mapper/*.xml"/>
+    </bean>
+
+    <!--    配置扫描器,将mybatis接口的实现加入到ioc容器中-->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.zjedu.furns.dao"/>
+    </bean>
+
+    <!--    配置事务控制-->
+    <bean class="org.springframework.jdbc.datasource.DataSourceTransactionManager" id="transactionManager">
+        <property name="dataSource" ref="pooledDataSource"></property>
+    </bean>
+
+    <!--    配置启动基于注解的声明式事务管理功能-->
+    <aop:config>
+        <aop:pointcut id="txPint" expression="execution(* com.zjedu.furns.service..*(..))"/>
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="txPint"/>
+    </aop:config>
+    <tx:advice id="txAdvice">
+        <tx:attributes>
+            <tx:method name="*/"/>
+            <tx:method name="get*" read-only="true"/>
+        </tx:attributes>
+    </tx:advice>
+</beans>
